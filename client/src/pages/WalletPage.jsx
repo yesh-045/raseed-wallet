@@ -35,7 +35,7 @@ import {
   Update as UpdateIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { PageContainer, BottomNavigation } from '../components';
+import { PageContainer, BottomNavigation, GoogleWalletButton } from '../components';
 
 const WalletPage = () => {
   const navigate = useNavigate();
@@ -493,6 +493,68 @@ const WalletPage = () => {
       </Box>
 
       <PageContainer>
+        {/* Google Wallet Integration Test Section */}
+        <Card sx={{ mb: 3, bgcolor: 'primary.50', border: '1px solid', borderColor: 'primary.200' }}>
+          <CardContent>
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+              <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                <WalletIcon />
+              </Avatar>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Google Wallet Integration
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Test our new Google Wallet pass creation feature
+                </Typography>
+              </Box>
+            </Stack>
+            
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <GoogleWalletButton
+                passType="test"
+                variant="contained"
+                size="medium"
+                onSuccess={(result) => {
+                  setSnackbar({
+                    open: true,
+                    message: 'Test pass created successfully!',
+                    severity: 'success'
+                  });
+                }}
+                onError={(error) => {
+                  setSnackbar({
+                    open: true,
+                    message: `Error: ${error}`,
+                    severity: 'error'
+                  });
+                }}
+              />
+              
+              <GoogleWalletButton
+                passType="custom"
+                passData={{
+                  title: "Raseed Demo",
+                  header: "Demo Pass",
+                  description: "This is a demo pass showcasing Raseed's Google Wallet integration capabilities.",
+                  barcode_value: "DEMO-2025-001",
+                  background_color: "#1A73E8",
+                  app_link_url: "https://raseed.app"
+                }}
+                variant="outlined"
+                size="medium"
+                onSuccess={(result) => {
+                  setSnackbar({
+                    open: true,
+                    message: 'Demo pass created successfully!',
+                    severity: 'success'
+                  });
+                }}
+              />
+            </Stack>
+          </CardContent>
+        </Card>
+
         {Object.keys(groupedPasses()).length === 0 ? (
           // Empty State
           <Box sx={{ 

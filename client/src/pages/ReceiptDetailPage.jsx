@@ -4,6 +4,7 @@ import { Box, Typography, Card, CardContent, Chip, Stack, Button, Divider } from
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { getAuth } from 'firebase/auth';
 import app from '../firebase';
+import { GoogleWalletButton } from '../components';
 
 const ReceiptDetailPage = () => {
   const { id } = useParams();
@@ -159,6 +160,28 @@ const ReceiptDetailPage = () => {
             ) : (
               <Typography variant="body2" color="text.secondary">No inference data.</Typography>
             )}
+
+            {/* Add to Google Wallet Section */}
+            <Divider sx={{ my: 3 }} />
+            <Box>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                Save to Digital Wallet
+              </Typography>
+              <GoogleWalletButton
+                passType="receipt"
+                passData={{
+                  merchant_name: receipt.merchant || 'Unknown Merchant',
+                  total_amount: receipt.total?.toString() || '0.00',
+                  date: receipt.date || new Date().toISOString().split('T')[0],
+                  receipt_id: receipt.receipt_id || receipt.id,
+                }}
+                fullWidth
+                onSuccess={() => {
+                  // Could show a success message here
+                  console.log('Receipt pass created successfully');
+                }}
+              />
+            </Box>
           </CardContent>
         </Card>
       </Box>

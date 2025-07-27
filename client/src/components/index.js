@@ -18,6 +18,7 @@ export { default as RecentActivity } from './dashboard/RecentActivity';
 export { default as ChatInterface } from './chat/ChatInterface';
 
 // Wallet Components
+export { default as GoogleWalletButton } from './wallet/GoogleWalletButton';
 export { default as WalletPassCard } from './wallet/WalletPassCard';
 
 // Common Components

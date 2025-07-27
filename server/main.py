@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from routes.insights import router as insights_router
+from routes.agent import router as agent_router
+from routes.wallet import router as wallet_router
 from auth_middleware import get_current_user, get_current_user_optional
 from firestore_service import firestore_service
 import os
@@ -26,6 +28,8 @@ app.add_middleware(
 
 # Include routers with prefix
 app.include_router(insights_router, prefix="/api/insights")
+app.include_router(agent_router, prefix="/api/agent")
+app.include_router(wallet_router, prefix="/api/wallet")
 
 # Get database reference
 db = firestore_service.db

@@ -18,7 +18,7 @@ import WalletPage from './pages/WalletPage';
 import InsightsPage from './pages/InsightsPage';
 import InsightsAdvancedPage from './pages/InsightsAdvancedPage';
 import AgentPage from './pages/AgentPage';
-
+import ReceiptDetailPage from './pages/ReceiptDetailPage';
 const theme = createTheme({
   palette: {
     mode: 'light',
@@ -206,6 +206,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <UploadPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/receipt/:id"
+              element={
+                <PrivateRoute>
+                  <ReceiptDetailPage />
                 </PrivateRoute>
               }
             />

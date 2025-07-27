@@ -276,6 +276,61 @@ class ApiService {
       return false;
     }
   }
+
+
+  async chatWithAgent(message, userId = null) {
+    const uid = userId || this.getUserId();
+    return this.request('/api/agent/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: message,
+        uid: uid
+      })
+    });
+  }
+
+  /**
+   * Get agent status
+   */
+  async getAgentStatus() {
+    return this.request('/api/agent/status');
+  }
+
+  // ==================== WALLET API METHODS ====================
+
+  /**
+   * Get Google Wallet integration status
+   */
+  async getWalletStatus() {
+    return this.request('/api/wallet/status');
+  }
+
+  /**
+   * Create a Google Wallet pass for a receipt
+   */
+  async createReceiptPass(receiptData) {
+    return this.request('/api/wallet/create-receipt-pass', {
+      method: 'POST',
+      body: JSON.stringify(receiptData)
+    });
+  }
+
+  /**
+   * Create a custom Google Wallet pass
+   */
+  async createCustomPass(passData) {
+    return this.request('/api/wallet/create-custom-pass', {
+      method: 'POST',
+      body: JSON.stringify(passData)
+    });
+  }
+
+  /**
+   * Create a test Google Wallet pass
+   */
+  async createTestPass() {
+    return this.request('/api/wallet/test-pass');
+  }
 }
 
 // Create and export a singleton instance
@@ -296,3 +351,13 @@ export const getMicroMomentAnalysis = (...args) => apiService.getMicroMomentAnal
 export const getAllInsights = (...args) => apiService.getAllInsights(...args);
 export const getInsight = (...args) => apiService.getInsight(...args);
 export const isServerConnected = (...args) => apiService.isServerConnected(...args);
+
+// Agent API exports
+export const chatWithAgent = (...args) => apiService.chatWithAgent(...args);
+export const getAgentStatus = (...args) => apiService.getAgentStatus(...args);
+
+// Wallet API exports
+export const getWalletStatus = (...args) => apiService.getWalletStatus(...args);
+export const createReceiptPass = (...args) => apiService.createReceiptPass(...args);
+export const createCustomPass = (...args) => apiService.createCustomPass(...args);
+export const createTestPass = (...args) => apiService.createTestPass(...args);

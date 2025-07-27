@@ -15,6 +15,12 @@ import {
   Stack,
   useTheme,
   useMediaQuery,
+  Alert,
+  Skeleton,
+  Fade,
+  Divider,
+  Paper,
+  LinearProgress,
 } from '@mui/material';
 import {
   Send as SendIcon,
@@ -25,39 +31,144 @@ import {
   Receipt as ReceiptIcon,
   AccountBalanceWallet as WalletIcon,
   ArrowBack as ArrowBackIcon,
+  Psychology as PsychologyIcon,
+  TrendingUp as TrendingUpIcon,
+  AttachMoney as AttachMoneyIcon,
+  Assessment as AssessmentIcon,
+  Lightbulb as LightbulbIcon,
+  Speed as SpeedIcon,
+  SmartToy as SmartToyIcon,
+  Analytics as AnalyticsIcon,
+  Savings as SavingsIcon,
+  ShoppingCart as ShoppingCartIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  Security as SecurityIcon,
+  WifiOff as WifiOffIcon,
+  Wifi as WifiIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { BottomNavigation } from '../components';
+import { useAuth } from '../contexts/AuthContext';
+import { chatWithAgent, getAgentStatus } from '../services/api';
+
+// Add custom animations for enhanced UX
+const animationStyles = `
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+  
+  @keyframes bounce {
+    0%, 20%, 53%, 80%, 100% { transform: translateY(0); }
+    40%, 43% { transform: translateY(-8px); }
+    70% { transform: translateY(-4px); }
+    90% { transform: translateY(-2px); }
+  }
+  
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+  }
+  
+  @keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  @keyframes fadeInScale {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+`;
+
+// Inject styles if not already present
+if (typeof document !== 'undefined' && !document.getElementById('agent-animations')) {
+  const styleSheet = document.createElement('style');
+  styleSheet.id = 'agent-animations';
+  styleSheet.type = 'text/css';
+  styleSheet.innerText = animationStyles;
+  document.head.appendChild(styleSheet);
+}
 
 const AgentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { currentUser } = useAuth();
   
   const [messages, setMessages] = useState([
     {
       id: 1,
       type: 'bot',
-      content: 'Hi! I\'m your AI receipt assistant. I can help you analyze your spending patterns, search for specific receipts, or provide insights about your expenses.',
+      content: 'Hi! I\'m **Raseed**, your personal AI financial intelligence agent. I\'ve analyzed your account and I\'m ready to help you:\n\n💰 **Track & Analyze** your spending patterns\n📊 **Generate Insights** from your receipts\n🎯 **Optimize** your budget and savings\n💡 **Recommend** smart financial decisions\n\nWhat would you like to explore first?',
       timestamp: new Date().toISOString(),
+      isThinking: false,
+      messageType: 'welcome',
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const [agentStatus, setAgentStatus] = useState(null);
+  const [connectionError, setConnectionError] = useState(false);
+  const [thinkingMessage, setThinkingMessage] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Quick insight chips for common queries
+  // Advanced agentic conversation starters
   const quickInsights = [
-    'This month\'s grocery spend',
-    'Top merchants',
-    'Average daily spend',
-    'Coffee shop visits',
-    'Weekend vs weekday spending',
-    'Last week\'s total',
+    { 
+      text: 'Analyze my spending patterns this month', 
+      icon: <TrendingUpIcon sx={{ fontSize: 16 }} />,
+      category: 'analysis'
+    },
+    { 
+      text: 'Where can I save money right now?', 
+      icon: <LightbulbIcon sx={{ fontSize: 16 }} />,
+      category: 'recommendations'
+    },
+    { 
+      text: 'Show me my financial health score', 
+      icon: <SpeedIcon sx={{ fontSize: 16 }} />,
+      category: 'health'
+    },
+    { 
+      text: 'What are my biggest spending categories?', 
+      icon: <AssessmentIcon sx={{ fontSize: 16 }} />,
+      category: 'insights'
+    },
+    { 
+      text: 'Help me create a better budget', 
+      icon: <AttachMoneyIcon sx={{ fontSize: 16 }} />,
+      category: 'planning'
+    },
+    { 
+      text: 'Find unusual spending patterns', 
+      icon: <PsychologyIcon sx={{ fontSize: 16 }} />,
+      category: 'intelligence'
+    },
   ];
+
+  // Check agent status on component mount
+  useEffect(() => {
+    console.log('🔍 Current user:', currentUser);
+    console.log('🔑 Current user UID:', currentUser?.uid);
+    
+    const checkAgentStatus = async () => {
+      try {
+        const status = await getAgentStatus();
+        setAgentStatus(status);
+        setConnectionError(!status.agent_available);
+      } catch (error) {
+        console.error('Failed to get agent status:', error);
+        setConnectionError(true);
+      }
+    };
+
+    checkAgentStatus();
+  }, [currentUser]);
 
   // Initialize speech recognition on component mount
   useEffect(() => {
@@ -131,22 +242,83 @@ const AgentPage = () => {
       timestamp: new Date().toISOString(),
     };
 
+    const messageText = inputValue;
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+    setIsThinking(true);
 
-    // Simulate AI response with more realistic delay
-    setTimeout(() => {
-      const botResponse = {
+    // Simulate intelligent thinking process
+    const thinkingSteps = [
+      'Analyzing your financial data...',
+      'Processing spending patterns...',
+      'Generating personalized insights...',
+      'Crafting intelligent recommendations...',
+      'Finalizing response...'
+    ];
+
+    let stepIndex = 0;
+    const thinkingInterval = setInterval(() => {
+      if (stepIndex < thinkingSteps.length) {
+        setThinkingMessage(thinkingSteps[stepIndex]);
+        stepIndex++;
+      }
+    }, 800);
+
+    try {
+      // Call the real agent API
+      console.log('🎯 Sending message to agent:', messageText);
+      console.log('🔑 Using UID:', currentUser?.uid);
+      const response = await chatWithAgent(messageText, currentUser?.uid);
+      
+      clearInterval(thinkingInterval);
+      console.log('📥 Agent response:', response);
+      
+      if (response.success) {
+        const botResponse = {
+          id: Date.now() + 1,
+          type: 'bot',
+          content: response.response,
+          timestamp: response.timestamp,
+          actions: generateActionButtons(messageText),
+          messageType: 'analysis',
+        };
+        
+        // Add slight delay for better UX
+        setTimeout(() => {
+          setMessages(prev => [...prev, botResponse]);
+          setConnectionError(false);
+        }, 300);
+      } else {
+        // Handle API error with intelligent fallback
+        const errorResponse = {
+          id: Date.now() + 1,
+          type: 'bot',
+          content: response.response || '❌ I encountered an error processing your request. Please try again.',
+          timestamp: new Date().toISOString(),
+          messageType: 'error',
+        };
+        setMessages(prev => [...prev, errorResponse]);
+      }
+    } catch (error) {
+      clearInterval(thinkingInterval);
+      console.error('Agent chat error:', error);
+      setConnectionError(true);
+      
+      // Intelligent offline response
+      const fallbackResponse = {
         id: Date.now() + 1,
         type: 'bot',
-        content: generateBotResponse(inputValue),
+        content: '🔌 **I\'m currently offline**, but I can still help with general financial advice.\n\nFor personalized insights based on your actual spending data, please try again when I\'m back online. In the meantime, I can provide:\n\n• General budgeting tips\n• Savings strategies\n• Investment basics\n• Financial planning advice\n\nWhat would you like to know?',
         timestamp: new Date().toISOString(),
-        actions: generateActionButtons(inputValue),
+        messageType: 'offline',
       };
-      setMessages(prev => [...prev, botResponse]);
+      setMessages(prev => [...prev, fallbackResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1200);
+      setIsThinking(false);
+      setThinkingMessage('');
+    }
   };
 
   const generateActionButtons = (query) => {
@@ -172,44 +344,14 @@ const AgentPage = () => {
     return actions.length > 0 ? actions : null;
   };
 
-  const generateBotResponse = (query) => {
-    const lowerQuery = query.toLowerCase();
-    
-    // Enhanced responses with more specific data
-    if (lowerQuery.includes('grocery') || lowerQuery.includes('groceries')) {
-      return 'This month you\'ve spent $284.67 on groceries across 8 trips. Your main stores are:\n• Whole Foods: $156.30 (3 visits)\n• Trader Joe\'s: $89.45 (3 visits)\n• Local Market: $38.92 (2 visits)\n\nAverage per trip: $35.58';
-    }
-    
-    if (lowerQuery.includes('coffee') || lowerQuery.includes('starbucks')) {
-      return 'Coffee spending this month: $78.40 across 12 visits\n• Starbucks: $52.20 (8 visits)\n• Local Café: $26.20 (4 visits)\n\nYour most frequent order appears to be around $6.50. Peak coffee times: 8-9 AM and 2-3 PM.';
-    }
-    
-    if (lowerQuery.includes('top merchants') || lowerQuery.includes('top 5')) {
-      return 'Your top merchants this month:\n1. Starbucks - $52.20 (8 transactions)\n2. Whole Foods - $156.30 (3 transactions)\n3. Shell Gas - $89.40 (4 transactions)\n4. Amazon - $234.10 (6 transactions)\n5. Target - $78.50 (2 transactions)\n\nTotal: $610.50 across 23 transactions';
-    }
-    
-    if (lowerQuery.includes('daily') || lowerQuery.includes('average daily')) {
-      return 'Your average daily spending this month is $28.73.\n\nBreakdown:\n• Weekdays: $32.45/day\n• Weekends: $19.85/day\n• Highest day: $89.40 (Jan 15th)\n• Lowest day: $4.50 (Jan 3rd)';
-    }
-    
-    if (lowerQuery.includes('this month') || lowerQuery.includes('monthly')) {
-      return 'January 2024 spending summary:\n• Total: $862.19\n• Transactions: 31\n• Categories:\n  - Food & Dining: $341.27\n  - Gas & Transport: $127.85\n  - Shopping: $312.60\n  - Other: $80.47\n\nCompared to last month: +12.4%';
-    }
-    
-    if (lowerQuery.includes('week') || lowerQuery.includes('weekly')) {
-      return 'This week\'s spending: $127.43 across 9 transactions\n\n• Monday: $23.50 (Starbucks, lunch)\n• Tuesday: $45.20 (Grocery shopping)\n• Wednesday: $18.75 (Coffee, snacks)\n• Thursday: $32.40 (Gas station)\n• Friday: $7.58 (Coffee)\n\nWeekend spending: Not yet recorded.';
-    }
-    
-    if (lowerQuery.includes('weekend') || lowerQuery.includes('weekday')) {
-      return 'Spending pattern analysis:\n\n**Weekdays** (Mon-Fri):\n• Average: $32.45/day\n• Main categories: Coffee, lunch, commute\n• Peak: Thursday ($45.20 avg)\n\n**Weekends** (Sat-Sun):\n• Average: $19.85/day\n• Main categories: Groceries, entertainment\n• More varied transaction amounts';
-    }
-    
-    // Default response for unrecognized queries
-    return 'I can help you analyze your spending patterns from your existing receipts. Try asking about:\n• Specific merchants or categories\n• Time periods (this week, last month)\n• Spending comparisons\n• Transaction details\n\nWhat would you like to know about your expenses?';
-  };
-
   const handleQuickInsight = (insight) => {
-    setInputValue(insight);
+    const query = typeof insight === 'object' ? insight.text : insight;
+    setInputValue(query);
+    
+    // Auto-send the insight query
+    setTimeout(() => {
+      handleSendMessage(query);
+    }, 100);
   };
 
   const formatTime = (timestamp) => {
@@ -217,6 +359,78 @@ const AgentPage = () => {
       hour: 'numeric',
       minute: '2-digit',
     });
+  };
+
+  // Advanced message content formatter
+  const formatMessageContent = (content, messageType) => {
+    // Convert markdown-style formatting to React components
+    const formatText = (text) => {
+      return text
+        .split('\n')
+        .map((line, lineIndex) => {
+          if (!line.trim()) return <br key={lineIndex} />;
+          
+          // Handle headers
+          if (line.startsWith('**') && line.endsWith('**')) {
+            return (
+              <Typography 
+                key={lineIndex} 
+                variant="subtitle2" 
+                sx={{ fontWeight: 700, mb: 0.5, color: 'primary.main' }}
+              >
+                {line.slice(2, -2)}
+              </Typography>
+            );
+          }
+          
+          // Handle bullet points
+          if (line.startsWith('• ') || line.startsWith('- ')) {
+            return (
+              <Typography 
+                key={lineIndex} 
+                variant="body2" 
+                sx={{ ml: 2, mb: 0.5, display: 'flex', alignItems: 'flex-start' }}
+              >
+                <span style={{ marginRight: 8, color: '#1976d2' }}>•</span>
+                <span dangerouslySetInnerHTML={{ 
+                  __html: line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                }} />
+              </Typography>
+            );
+          }
+          
+          // Handle emoji + content lines
+          if (/^[🎯💰📊🎯💡📈📋🔍💳⭐]/u.test(line)) {
+            return (
+              <Box key={lineIndex} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Typography variant="h6" sx={{ mr: 1 }}>
+                  {line.charAt(0)}
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  dangerouslySetInnerHTML={{ 
+                    __html: line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                  }} 
+                />
+              </Box>
+            );
+          }
+          
+          // Regular text with markdown formatting
+          return (
+            <Typography 
+              key={lineIndex} 
+              variant="body2" 
+              sx={{ mb: 0.5, lineHeight: 1.6 }}
+              dangerouslySetInnerHTML={{ 
+                __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+              }}
+            />
+          );
+        });
+    };
+    
+    return <Box>{formatText(content)}</Box>;
   };
 
   return (
@@ -254,16 +468,60 @@ const AgentPage = () => {
             <ArrowBackIcon />
           </IconButton>
           
-          <Typography variant="h6" sx={{ fontWeight: 500, flex: 1 }}>
-            AI Assistant
+          <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PsychologyIcon sx={{ color: 'primary.main' }} />
+              Raseed AI Agent
+            </Box>
           </Typography>
+
+          {/* Agent Status with Intelligence Indicators */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {connectionError && (
+              <Chip
+                label="Offline Mode"
+                size="small"
+                color="warning"
+                variant="outlined"
+                icon={<SpeedIcon />}
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+            {agentStatus && agentStatus.agent_available && (
+              <Chip
+                label={`AI Online • ${agentStatus.tools_count} Tools`}
+                size="small"
+                color="success"
+                variant="outlined"
+                icon={<PsychologyIcon />}
+                sx={{ fontSize: '0.75rem' }}
+              />
+            )}
+          </Box>
         </Box>
 
-        {/* Quick Insight Chips */}
+        {/* Agent Status Alert */}
+        {connectionError && (
+          <Alert 
+            severity="warning" 
+            sx={{ mx: 2, mb: 1 }}
+            variant="filled"
+            icon={<PsychologyIcon />}
+          >
+            <Typography variant="body2">
+              <strong>Intelligence Engine Offline</strong> - Operating in reduced capability mode. 
+              Personal data analysis unavailable.
+            </Typography>
+          </Alert>
+        )}
+        
+        
+
+        {/* AI Capabilities Showcase */}
         {messages.length <= 2 && (
           <Box sx={{ px: 2, pb: 2 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Quick insights:
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 500 }}>
+              🤖 Try my AI capabilities:
             </Typography>
             <Box sx={{ 
               display: 'flex', 
@@ -275,16 +533,31 @@ const AgentPage = () => {
               {quickInsights.map((insight, index) => (
                 <Chip
                   key={index}
-                  label={insight}
+                  label={insight.text}
+                  icon={insight.icon}
                   variant="outlined"
                   onClick={() => handleQuickInsight(insight)}
                   sx={{ 
                     fontSize: '0.875rem',
-                    borderRadius: '16px',
+                    borderRadius: '20px',
+                    py: 2,
+                    px: 1,
+                    height: 'auto',
+                    '& .MuiChip-label': { 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: 0.5,
+                      whiteSpace: 'normal',
+                      textAlign: 'left'
+                    },
                     '&:hover': { 
-                      bgcolor: 'action.hover',
-                      borderColor: 'primary.main'
-                    }
+                      bgcolor: 'primary.light',
+                      borderColor: 'primary.main',
+                      color: 'primary.contrastText',
+                      transform: 'translateY(-1px)',
+                      boxShadow: 2
+                    },
+                    transition: 'all 0.2s ease-in-out'
                   }}
                 />
               ))}
@@ -411,19 +684,87 @@ const AgentPage = () => {
             </ListItem>
           ))}
 
-          {/* Loading indicator */}
-          {isLoading && (
+          {/* Enhanced Loading & Thinking Indicator */}
+          {(isLoading || isThinking) && (
             <ListItem sx={{ px: 0, py: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                  <BotIcon />
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'flex-start', 
+                gap: 1.5,
+                maxWidth: '85%'
+              }}>
+                <Avatar sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  bgcolor: 'secondary.main',
+                  position: 'relative',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  <SmartToyIcon />
+                  {/* Active indicator */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: -2,
+                      right: -2,
+                      width: 10,
+                      height: 10,
+                      bgcolor: 'success.main',
+                      borderRadius: '50%',
+                      border: '2px solid white',
+                      animation: 'heartbeat 1.5s ease-in-out infinite',
+                    }}
+                  />
                 </Avatar>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CircularProgress size={16} />
-                  <Typography variant="body2" color="text.secondary">
-                    Analyzing your data...
-                  </Typography>
-                </Box>
+                <Card
+                  sx={{
+                    bgcolor: 'grey.50',
+                    borderLeft: '3px solid',
+                    borderColor: 'primary.main',
+                    borderRadius: '12px 12px 12px 4px',
+                    boxShadow: 'none',
+                    border: '1px solid',
+                    borderColor: 'grey.200',
+                    minWidth: 200,
+                  }}
+                >
+                  <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <LinearProgress 
+                        sx={{ 
+                          flex: 1,
+                          height: 4,
+                          borderRadius: 2,
+                          bgcolor: 'primary.light',
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: 'primary.main',
+                          }
+                        }} 
+                      />
+                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 500,
+                        color: 'primary.main',
+                        mb: 0.5 
+                      }}
+                    >
+                      🧠 AI Intelligence Engine
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary"
+                      sx={{ 
+                        fontStyle: 'italic',
+                        display: 'block',
+                        lineHeight: 1.4
+                      }}
+                    >
+                      {isThinking ? thinkingMessage : 'Analyzing your financial data...'}
+                    </Typography>
+                  </CardContent>
+                </Card>
               </Box>
             </ListItem>
           )}
