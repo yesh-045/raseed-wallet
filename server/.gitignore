@@ -1,0 +1,15 @@
+.venv/
+*.pyc
+*.log
+__pycache__/
+.idea/
+.vscode/
+env/
+
+venv/
+/server/agents/ReceiptOrchestrator/subagents/google_wallet/google_cloud_credentials.json
+server/agents/serviceAccount.json
+C:/Users/yeshw/Projects/Raseed/Raseed/server/serviceAccount.json
+C:/Users/yeshw/Projects/Raseed/Raseed/server/agents/serviceAccount.json
+serviceAccount.json
+*/**/serviceAccount.json
